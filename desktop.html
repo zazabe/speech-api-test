@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Speech Recognition Test Page</title>
+  </head>
+  <body onload="setup()">
+    <video id="video" src="test.webm" width="400" height="300" loop="true"></video>
+
+    <div id="result">
+      <span id="final"></span>
+      <span id="interim"></span>
+    </div>
+
+    <button onclick="cls()">cls</button>
+    <button onclick="playVideo()">playVideo()</button>
+    <button onclick="start()">start()</button>
+    <button onclick="pause()">pause()</button>
+    <button onclick="resume()">resume()</button>
+    <button onclick="stop()">stop()</button>
+    <button onclick="abort()">abort()</button>
+
+    <!-- <pre id="log"></pre> -->
+    <table id="log" width="350px" border="0"></table>
+
+
+    <script>
+
+      var finalEl = document.querySelector('#final');
+      var interimEl = document.querySelector('#interim');
+      var videoEl = document.querySelector('#video');
+
+      function playVideo() {
+        videoEl.play();
+      }
+
+      var finalText = '';
+      function showText(event) {
+        // source from https://www.google.com/intl/en/chrome/demos/speech.html
+        var interimText = '';
+        if (typeof(event.results) == 'undefined') {
+          reco.onend = null;
+          stop();
+          return;
+        }
+        for (var i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalText += event.results[i][0].transcript;
+          } else {
+            interimText += event.results[i][0].transcript;
+          }
+        }
+        finalEl.innerText = finalText;
+        interimEl.innerText = interimText;
+      }
+
+      function cls() {
+        document.getElementById('log').innerHTML = '';
+      }
+
+      function log(msg) {
+        var d = new Date();
+        var t = d.getHours() + ':' +
+          d.getMinutes() + ':' +
+          d.getSeconds() + '.' +
+          d.getMilliseconds();
+        var table = document.getElementById('log');
+        var row = table.insertRow(-1);
+        var cell1 = row.insertCell(-1);
+        var time = document.createElement("pre");
+        time.innerHTML = t;
+        cell1.appendChild(time);
+        var cell2 = row.insertCell(-1);
+        var message = document.createElement("pre");
+        message.innerHTML = msg;
+        cell2.appendChild(message);
+      }
+
+      function res2str(results, index) {
+        var s = "&nbsp;" + index + ":{";
+        var r = results[index];
+        if (r.isFinal) {
+          s += '(final) ';
+        }
+
+        s += '[';
+        for (var j = 0; j < r.length; ++j) {
+          s += r.item(j).transcript + ' (' + ' ' + r.item(j).confidence + ')';
+          if (j < r.length - 1)
+            s += ',<br>&nbsp;&nbsp;&nbsp;';
+
+        }
+        s += ']';
+        s += "}<br>";
+        return s;
+      }
+
+      function setup() {
+        try {
+          window.reco = new webkitSpeechRecognition();
+        } catch(e) {
+          document.write("The Web Speech API is not supported by this browser.");
+          return;
+        }
+
+        reco.maxAlternatives = 1;
+        reco.continuous = true;
+        reco.interimResults = true;
+
+        // Set default handlers.
+        for (var prop in reco) {
+          matches = prop.match(/^on(.*)/);
+          if (matches && prop != 'onresult' && prop != 'onerror') {
+            reco.addEventListener(matches[1], function(event) {
+              log('on' + event.type);
+            });
+          }
+        }
+
+        reco.addEventListener('error', function(e) {
+          log('onerror ' + e.error + ':' + e.message);
+        });
+
+        reco.addEventListener('result', function(e) {
+          try {
+            log('onresult ' + res2str(e.results, e.resultIndex));
+            showText(e);
+          } catch(ex) {
+            log('onresult - exception: ' + ex);
+          }
+        });
+
+        log('created reco object');
+      }
+
+      function start() {
+        log('start()');
+
+        log('reco.lang = ' + reco.lang);
+        log('reco.continuous = ' + reco.continuous);
+        log('reco.interimResults = ' + reco.interimResults);
+        try {
+          reco.start();
+        } catch(e) {
+          log('exception: ' + e);
+        }
+      }
+
+      function pause() {
+        log('pause()');
+        try {
+          reco.pause();
+        } catch(e) {
+          log('exception: ' + e);
+        }
+      }
+
+      function resume() {
+        log('resume()');
+        try {
+          reco.resume();
+        } catch(e) {
+          log('exception: ' + e);
+        }
+      }
+
+      function stop() {
+        log('stop()');
+        reco.stop();
+      }
+
+      function abort() {
+        log('abort()');
+        reco.abort();
+      }
+
+    </script>
+    <style>
+      pre { margin: 0 !important; }
+      button {
+        width: 150px;
+        font-size: 18px;
+      }
+
+      #result {
+        margin: 10px 15px;
+        padding: 10px 15px;
+        background-color: #eee;
+      }
+      #interim { color: #999; }
+      #final {color: #222; }
+      #video {
+        position: absolute;
+        right: 0;
+        top: 100px;
+      }
+
+    </style>
+
+  </body>
+</html>
